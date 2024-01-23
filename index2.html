@@ -1,0 +1,111 @@
+<html><head></head><body>
+<script>
+  var YOUR_CLIENT_ID = '616641124080-ef83pgfdjpgv19o5f7ueihpv2q5chtp3.apps.googleusercontent.com';
+  var YOUR_REDIRECT_URI = 'https://amber-jsandye-74.tiiny.site';
+  var fragmentString = location.hash.substring(1);
+
+  // Parse query string to see if page request is coming from OAuth 2.0 server.
+  var params = {};
+  var regex = /([^&=]+)=([^&]*)/g, m;
+  while (m = regex.exec(fragmentString)) {
+    params[decodeURIComponent(m[1])] = decodeURIComponent(m[2]);
+  }
+  if (Object.keys(params).length > 0) {
+    localStorage.setItem('oauth2-test-params', JSON.stringify(params) );
+    if (params['state'] && params['state'] == 'try_sample_request') {
+      trySampleRequest();
+    }
+  }
+
+  // If there's an access token, try an API request.
+  // Otherwise, start OAuth 2.0 flow.
+  function trySampleRequest() {
+    var params = JSON.parse(localStorage.getItem('oauth2-test-params'));
+    if (params && params['access_token']) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET',
+              'https://www.googleapis.com/youtube/v3/channels?part=contentDetails&mine=true&type=video&' +
+              'access_token=' + params['access_token']); // endpoint that returns channel ID of channel you own and
+        // uploads - playlist ID of your uploads
+        // {
+        //     "kind": "youtube#channelListResponse",
+        //     "etag": "_1enBPTiUaNwcMOWWBY2UM1_NeE",
+        //     "pageInfo": {
+        //     "totalResults": 1,
+        //         "resultsPerPage": 5
+        // },
+        //     "items": [
+        //     {
+        //         "kind": "youtube#channel",
+        //         "etag": "SlXnOuisdeIbEgZRpvta0rCatNU",
+        //         "id": "UC9xi6GoHKn05ddDesPW_hgg",
+        //         "contentDetails": {
+        //             "relatedPlaylists": {
+        //                 "likes": "LL",
+        //                 "uploads": "UU9xi6GoHKn05ddDesPW_hgg"
+        //             }
+        //         }
+        //     }
+        // ]
+        // }
+        // get Playsist ID of uploads and use it to get videos list!! link below
+
+        //curl \
+  //       'https://youtube.googleapis.com/youtube/v3/playlistItems?part=snippet%2CcontentDetails&maxResults=25&playlistId=UU9xi6GoHKn05ddDesPW_hgg&key=[YOUR_API_KEY]' \
+  // --header 'Authorization: Bearer [YOUR_ACCESS_TOKEN]' \
+  // --header 'Accept: application/json' \
+  // --compressed
+        // to gets videos list
+
+
+        xhr.onreadystatechange = function (e) {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+          console.log(xhr.response);
+        } else if (xhr.readyState === 4 && xhr.status === 401) {
+          // Token invalid, so prompt for user permission.
+          oauth2SignIn();
+        }
+      };
+      xhr.send(null);
+    } else {
+      oauth2SignIn();
+    }
+  }
+
+  /*
+   * Create form to request access token from Google's OAuth 2.0 server.
+   */
+  function oauth2SignIn() {
+    // Google's OAuth 2.0 endpoint for requesting an access token
+    var oauth2Endpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
+
+    // Create element to open OAuth 2.0 endpoint in new window.
+    var form = document.createElement('form');
+    form.setAttribute('method', 'GET'); // Send as a GET request.
+    form.setAttribute('action', oauth2Endpoint);
+
+    // Parameters to pass to OAuth 2.0 endpoint.
+    var params = {'client_id': YOUR_CLIENT_ID,
+      'redirect_uri': YOUR_REDIRECT_URI,
+      'scope': ['https://www.googleapis.com/auth/youtube.force-ssl','https://www.googleapis.com/auth/youtubepartner-channel-audit'],
+      'state': 'try_sample_request',
+      'include_granted_scopes': 'true',
+      'response_type': 'token'};
+
+    // Add form parameters as hidden input values.
+    for (var p in params) {
+      var input = document.createElement('input');
+      input.setAttribute('type', 'hidden');
+      input.setAttribute('name', p);
+      input.setAttribute('value', params[p]);
+      form.appendChild(input);
+    }
+
+    // Add form to page and submit it to open the OAuth 2.0 endpoint.
+    document.body.appendChild(form);
+    form.submit();
+  }
+</script>
+
+<button onclick="trySampleRequest();">Try sample request</button>
+</body></html>
